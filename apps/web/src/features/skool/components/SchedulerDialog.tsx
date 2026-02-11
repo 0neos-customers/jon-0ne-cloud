@@ -98,13 +98,13 @@ export function SchedulerDialog({
     })
   }
 
-  const isValid = formData.category && formData.time
+  const isValid = formData.category && formData.time && formData.variation_group_id
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit Schedule Slot' : 'Add Schedule Slot'}</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit Recurring Post' : 'Add Recurring Post'}</DialogTitle>
           <DialogDescription>
             {isEditMode
               ? 'Update the schedule slot details below.'
@@ -179,9 +179,9 @@ export function SchedulerDialog({
               Variation Group (content source)
             </label>
             <Select
-              value={formData.variation_group_id || 'none'}
+              value={formData.variation_group_id || ''}
               onValueChange={(value) =>
-                setFormData({ ...formData, variation_group_id: value === 'none' ? null : value })
+                setFormData({ ...formData, variation_group_id: value || null })
               }
               disabled={groupsLoading}
             >
@@ -191,7 +191,6 @@ export function SchedulerDialog({
                 />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No group (legacy matching)</SelectItem>
                 {variationGroups
                   .filter((g) => g.is_active)
                   .map((group) => (
@@ -202,9 +201,7 @@ export function SchedulerDialog({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {formData.variation_group_id
-                ? 'Posts will be pulled from this variation group'
-                : 'Posts will match by category, day, and time (legacy mode)'}
+              Posts will be pulled from this variation group
             </p>
           </div>
 
@@ -242,7 +239,7 @@ export function SchedulerDialog({
           </Button>
           <Button onClick={handleSubmit} disabled={!isValid || isSaving}>
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEditMode ? 'Save Changes' : 'Add Slot'}
+            {isEditMode ? 'Save Changes' : 'Add Recurring Post'}
           </Button>
         </DialogFooter>
       </DialogContent>
