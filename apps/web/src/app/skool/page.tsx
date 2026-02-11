@@ -166,7 +166,7 @@ export default function SkoolOverviewPage() {
             )}
             <div className="mt-4">
               <Link
-                href="/skool/scheduled"
+                href="/skool/scheduler"
                 className="text-sm text-primary hover:underline inline-flex items-center gap-1"
               >
                 View all scheduled posts
@@ -232,11 +232,18 @@ export default function SkoolOverviewPage() {
         <CardContent>
           <div className="flex flex-wrap gap-3">
             <Link
-              href="/skool/scheduled?new=true"
+              href="/skool/scheduler?newOneOff=true"
               className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90"
             >
               <CalendarClock className="h-4 w-4" />
               Schedule One-Off Post
+            </Link>
+            <Link
+              href="/skool/scheduler?newRecurring=true"
+              className="inline-flex items-center gap-2 px-4 py-2 border rounded-md text-sm font-medium hover:bg-muted"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Schedule Recurring Post
             </Link>
             <Link
               href="/skool/groups?new=true"

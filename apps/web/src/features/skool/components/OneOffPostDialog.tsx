@@ -153,7 +153,7 @@ export function OneOffPostDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <label htmlFor="oneoff-category" className="text-sm font-medium">
-                Category
+                Skool Category
               </label>
               <Select
                 value={formData.category}

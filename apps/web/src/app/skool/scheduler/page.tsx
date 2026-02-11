@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import {
   Button,
   Badge,
@@ -83,6 +84,9 @@ type OneOffInlineChanges = {
 }
 
 export default function SchedulerPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
   // Recurring posts hooks and state
   const { schedulers, isLoading: schedulersLoading, refresh: refreshSchedulers } = useSchedulers()
   const { groups: variationGroups, isLoading: groupsLoading } = useVariationGroups()
@@ -126,6 +130,22 @@ export default function SchedulerPage() {
       Object.values(oneOffDebounceTimers.current).forEach(clearTimeout)
     }
   }, [])
+
+  // Handle query params to auto-open dialogs
+  useEffect(() => {
+    const newOneOff = searchParams.get('newOneOff')
+    const newRecurring = searchParams.get('newRecurring')
+
+    if (newOneOff === 'true') {
+      setOneOffDialogOpen(true)
+      // Clear the query param
+      router.replace('/skool/scheduler', { scroll: false })
+    } else if (newRecurring === 'true') {
+      setRecurringDialogOpen(true)
+      // Clear the query param
+      router.replace('/skool/scheduler', { scroll: false })
+    }
+  }, [searchParams, router])
 
   // ===== RECURRING POSTS HANDLERS =====
 
@@ -618,7 +638,7 @@ export default function SchedulerPage() {
                                 onValueChange={(value) => handleRecurringGroupChange(scheduler, value)}
                                 disabled={recurringSavingRows.has(scheduler.id) || groupsLoading}
                               >
-                                <SelectTrigger size="sm" className="w-[140px]">
+                                <SelectTrigger size="sm" className="min-w-[200px]">
                                   <SelectValue placeholder="Select group" />
                                 </SelectTrigger>
                                 <SelectContent>

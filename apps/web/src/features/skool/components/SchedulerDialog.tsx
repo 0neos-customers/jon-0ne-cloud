@@ -115,7 +115,7 @@ export function SchedulerDialog({
           {/* Category */}
           <div className="grid gap-2">
             <label htmlFor="scheduler-category" className="text-sm font-medium">
-              Category (where to post)
+              Skool Category (where to post)
             </label>
             <Select
               value={formData.category}

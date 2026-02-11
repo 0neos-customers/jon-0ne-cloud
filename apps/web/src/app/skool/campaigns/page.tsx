@@ -172,7 +172,7 @@ export default function CampaignsPage() {
 
                 {/* View Posts Link */}
                 <Link
-                  href={`/skool/scheduled?campaign_id=${campaign.id}`}
+                  href={`/skool/scheduler?campaign_id=${campaign.id}`}
                   className="text-sm text-primary hover:underline"
                 >
                   View {campaign.stats?.total_posts || 0} posts
