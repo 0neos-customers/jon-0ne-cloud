@@ -169,3 +169,14 @@ COMMENT ON TABLE skool_members_monthly IS 'Monthly member breakdown from Skool A
 COMMENT ON TABLE skool_members_daily IS 'Daily member counts - from API (last 30d) or interpolated from monthly';
 COMMENT ON FUNCTION get_member_count_for_period IS 'Get member statistics for a date range';
 COMMENT ON FUNCTION interpolate_daily_members IS 'Generate daily estimates from monthly totals';
+
+-- =============================================================================
+-- ROW LEVEL SECURITY
+-- =============================================================================
+
+ALTER TABLE skool_members_monthly ENABLE ROW LEVEL SECURITY;
+ALTER TABLE skool_members_daily ENABLE ROW LEVEL SECURITY;
+
+-- Allow all for service role (auth handled via Clerk)
+CREATE POLICY "Service role full access" ON skool_members_monthly FOR ALL USING (true);
+CREATE POLICY "Service role full access" ON skool_members_daily FOR ALL USING (true);

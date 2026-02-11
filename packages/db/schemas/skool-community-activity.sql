@@ -26,3 +26,10 @@ CREATE INDEX IF NOT EXISTS idx_skool_community_activity_daily_group_date
   ON skool_community_activity_daily(group_slug, date);
 
 COMMENT ON TABLE skool_community_activity_daily IS 'Daily community activity (engagement + active members) from Skool admin-metrics API';
+
+-- =============================================================================
+-- ROW LEVEL SECURITY
+-- =============================================================================
+
+ALTER TABLE skool_community_activity_daily ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Service role full access" ON skool_community_activity_daily FOR ALL USING (true);

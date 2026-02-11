@@ -189,3 +189,16 @@ UNION ALL
 SELECT 'skool_revenue_monthly', COUNT(*) FROM skool_revenue_monthly
 UNION ALL
 SELECT 'skool_subscription_events', COUNT(*) FROM skool_subscription_events;
+
+-- =============================================================================
+-- ROW LEVEL SECURITY
+-- =============================================================================
+
+ALTER TABLE skool_revenue_daily ENABLE ROW LEVEL SECURITY;
+ALTER TABLE skool_revenue_monthly ENABLE ROW LEVEL SECURITY;
+ALTER TABLE skool_subscription_events ENABLE ROW LEVEL SECURITY;
+
+-- Allow all for service role (auth handled via Clerk)
+CREATE POLICY "Service role full access" ON skool_revenue_daily FOR ALL USING (true);
+CREATE POLICY "Service role full access" ON skool_revenue_monthly FOR ALL USING (true);
+CREATE POLICY "Service role full access" ON skool_subscription_events FOR ALL USING (true);

@@ -273,7 +273,10 @@ CREATE INDEX idx_daily_agg_date ON daily_aggregates(date);
 -- ============================================
 
 -- Funnel conversion rates (configurable date range via query)
-CREATE OR REPLACE VIEW funnel_conversions AS
+-- Note: SECURITY INVOKER ensures RLS policies are respected
+DROP VIEW IF EXISTS funnel_conversions;
+CREATE VIEW funnel_conversions
+WITH (security_invoker = true) AS
 SELECT
   campaign_id,
   SUM(new_members) as members,
@@ -318,7 +321,10 @@ FROM daily_aggregates
 GROUP BY campaign_id;
 
 -- Cohort EPL by day
-CREATE OR REPLACE VIEW epl_by_cohort_day AS
+-- Note: SECURITY INVOKER ensures RLS policies are respected
+DROP VIEW IF EXISTS epl_by_cohort_day;
+CREATE VIEW epl_by_cohort_day
+WITH (security_invoker = true) AS
 SELECT
   snapshot_day,
   AVG(value) as avg_epl,
@@ -341,6 +347,7 @@ ALTER TABLE ad_metrics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE revenue ENABLE ROW LEVEL SECURITY;
 ALTER TABLE daily_aggregates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meta_account_daily ENABLE ROW LEVEL SECURITY;
 
 -- Create policies (allow all for service role, we handle auth via Clerk)
 CREATE POLICY "Service role full access" ON contacts FOR ALL USING (true);
@@ -351,6 +358,7 @@ CREATE POLICY "Service role full access" ON ad_metrics FOR ALL USING (true);
 CREATE POLICY "Service role full access" ON expenses FOR ALL USING (true);
 CREATE POLICY "Service role full access" ON revenue FOR ALL USING (true);
 CREATE POLICY "Service role full access" ON daily_aggregates FOR ALL USING (true);
+CREATE POLICY "Service role full access" ON meta_account_daily FOR ALL USING (true);
 
 -- ============================================
 -- UPDATED_AT TRIGGER

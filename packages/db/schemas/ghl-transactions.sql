@@ -138,3 +138,14 @@ INSERT INTO ghl_transactions (
   ('txn_test_002', 'contact_002', 'Jane Smith', 'jane@example.com', 497.00, 'succeeded', 'invoice', 'Premium Setup', '2026-02-03 14:30:00'),
   ('txn_test_003', 'contact_003', 'Bob Johnson', 'bob@example.com', 2500.00, 'succeeded', 'invoice', 'Success Fee', '2026-02-05 09:15:00');
 */
+
+-- =============================================================================
+-- ROW LEVEL SECURITY
+-- =============================================================================
+
+ALTER TABLE ghl_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ghl_sync_log ENABLE ROW LEVEL SECURITY;
+
+-- Allow all for service role (auth handled via Clerk)
+CREATE POLICY "Service role full access" ON ghl_transactions FOR ALL USING (true);
+CREATE POLICY "Service role full access" ON ghl_sync_log FOR ALL USING (true);
