@@ -312,3 +312,30 @@ export interface GhlMessage {
   direction: 'inbound' | 'outbound'
   dateAdded: string
 }
+
+// =============================================================================
+// HAND-RAISER TYPES (Phase 7)
+// =============================================================================
+
+/**
+ * Comment on a Skool post
+ */
+export interface SkoolComment {
+  id: string
+  userId: string
+  username: string
+  displayName: string
+  content: string
+  createdAt: string
+}
+
+/**
+ * Result from hand-raiser processing
+ */
+export interface HandRaiserResult {
+  campaignsProcessed: number
+  commentsChecked: number
+  dmsSent: number
+  errors: number
+  errorDetails: Array<{ campaignId?: string; error: string }>
+}

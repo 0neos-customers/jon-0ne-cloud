@@ -16,6 +16,7 @@ export type {
   SkoolUser,
   SkoolConversation,
   SkoolMessage,
+  SkoolComment,
   // Database row types
   DmSyncConfigRow,
   ContactMappingRow,
@@ -33,6 +34,7 @@ export type {
   SyncError,
   SendResult,
   MapContactResult,
+  HandRaiserResult,
   // Input types
   CreateSyncConfigInput,
   CreateHandRaiserCampaignInput,
@@ -103,6 +105,9 @@ export {
   syncInboundMessages,
   sendPendingMessages,
   getEnabledSyncConfigs,
+  // Hand-raiser functions (Phase 7)
+  processHandRaisers,
+  getUsersWithActiveHandRaisers,
   // Legacy class
   DmSyncEngine,
   createSyncEngine,

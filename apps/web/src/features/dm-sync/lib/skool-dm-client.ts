@@ -11,6 +11,7 @@ import type {
   SkoolConversation,
   SkoolMessage,
   SkoolUser,
+  SkoolComment,
   SendResult,
 } from '../types'
 
@@ -85,6 +86,22 @@ interface SkoolApiMessage {
   id: string
   channelId: string
   senderId: string
+  content: string
+  createdAt: string
+}
+
+/**
+ * Raw comment from Skool API
+ */
+interface SkoolApiComment {
+  id: string
+  userId: string
+  user?: {
+    id: string
+    name: string
+    displayName: string
+    image?: string | null
+  }
   content: string
   createdAt: string
 }
@@ -570,6 +587,140 @@ export class SkoolDmClient {
     await this.fetch(`/channels/${conversationId}/read`, {
       method: 'POST',
     })
+  }
+
+  // ===========================================================================
+  // POST COMMENTS API (Hand-Raiser Feature)
+  // ===========================================================================
+
+  /**
+   * Get comments on a Skool post
+   *
+   * @param postId - The post ID (extracted from URL)
+   * @param communitySlug - The community slug (optional, uses instance default)
+   * @returns Array of comments
+   */
+  async getPostComments(
+    postId: string,
+    communitySlug?: string
+  ): Promise<SkoolComment[]> {
+    const slug = communitySlug || this.communitySlug
+    if (!slug) {
+      throw new SkoolDmError(
+        'Community slug is required for fetching post comments',
+        'UNKNOWN_ERROR'
+      )
+    }
+
+    console.log(`[SkoolDmClient] Fetching comments for post: ${postId}`)
+
+    // Skool API endpoint for post comments
+    // The endpoint structure is: /groups/{groupSlug}/posts/{postId}/comments
+    const url = `${SKOOL_API_BASE}/groups/${slug}/posts/${postId}/comments`
+
+    try {
+      const response = await this.fetch<{ comments: SkoolApiComment[] }>(url)
+
+      console.log(
+        `[SkoolDmClient] Fetched ${response.comments?.length || 0} comments`
+      )
+
+      return (response.comments || []).map((comment) =>
+        this.transformComment(comment)
+      )
+    } catch (error) {
+      if (error instanceof SkoolDmError && error.code === 'NOT_FOUND') {
+        // Post might not exist or no comments yet
+        console.log(`[SkoolDmClient] No comments found for post: ${postId}`)
+        return []
+      }
+      throw error
+    }
+  }
+
+  /**
+   * Parse post ID from a Skool post URL
+   *
+   * Supports formats:
+   * - https://www.skool.com/community/post-slug-abc123
+   * - https://www.skool.com/community/post/abc123
+   *
+   * @param url - The full Skool post URL
+   * @returns Object with postId and communitySlug
+   */
+  parsePostIdFromUrl(url: string): { postId: string; communitySlug: string } {
+    // Remove trailing slash
+    const cleanUrl = url.replace(/\/$/, '')
+
+    // Parse the URL
+    let urlObj: URL
+    try {
+      urlObj = new URL(cleanUrl)
+    } catch {
+      throw new SkoolDmError(
+        `Invalid URL format: ${url}`,
+        'UNKNOWN_ERROR'
+      )
+    }
+
+    // Expected path: /community-slug/post-slug-postid or /community-slug/post/postid
+    const pathParts = urlObj.pathname.split('/').filter(Boolean)
+
+    if (pathParts.length < 2) {
+      throw new SkoolDmError(
+        `Invalid Skool post URL format: ${url}`,
+        'UNKNOWN_ERROR'
+      )
+    }
+
+    const communitySlug = pathParts[0]
+
+    // Check if it's /community/post/postid format
+    if (pathParts[1] === 'post' && pathParts[2]) {
+      return {
+        postId: pathParts[2],
+        communitySlug,
+      }
+    }
+
+    // Otherwise, extract postId from the slug (last segment after final hyphen)
+    // Format: post-title-slug-abc123 -> abc123
+    const postSlug = pathParts[pathParts.length - 1]
+
+    // Try to extract the postId from the end of the slug
+    // Skool post IDs are typically alphanumeric, 8-12 characters
+    const lastHyphenIndex = postSlug.lastIndexOf('-')
+    if (lastHyphenIndex !== -1) {
+      const potentialId = postSlug.substring(lastHyphenIndex + 1)
+      // Validate it looks like an ID (alphanumeric, reasonable length)
+      if (/^[a-zA-Z0-9]{4,20}$/.test(potentialId)) {
+        return {
+          postId: potentialId,
+          communitySlug,
+        }
+      }
+    }
+
+    // If we can't extract from slug, use the whole slug as the postId
+    // (some URLs may be in a different format)
+    return {
+      postId: postSlug,
+      communitySlug,
+    }
+  }
+
+  /**
+   * Transform API comment to SkoolComment
+   */
+  private transformComment(comment: SkoolApiComment): SkoolComment {
+    return {
+      id: comment.id,
+      userId: comment.userId || comment.user?.id || '',
+      username: comment.user?.name || '',
+      displayName: comment.user?.displayName || '',
+      content: comment.content,
+      createdAt: comment.createdAt,
+    }
   }
 
   /**

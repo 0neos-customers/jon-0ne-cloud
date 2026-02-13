@@ -15,6 +15,8 @@ import type {
   SkoolConversation,
   SkoolMessage,
   DmMessageRow,
+  HandRaiserResult,
+  HandRaiserCampaignRow,
 } from '../types'
 import { SkoolDmClient, createSkoolDmClient } from './skool-dm-client'
 import { ContactMapper, findOrCreateGhlContact } from './contact-mapper'
@@ -452,6 +454,352 @@ export async function sendPendingMessages(
   }
 
   return result
+}
+
+/**
+ * Process hand-raiser campaigns for a user
+ *
+ * 1. Get active campaigns for user
+ * 2. For each campaign:
+ *    - Parse post URL to get postId
+ *    - Fetch comments via Skool API
+ *    - Filter by keyword if set
+ *    - Skip users already in dm_hand_raiser_sent
+ *    - For new users:
+ *      a. Find/create GHL contact
+ *      b. Queue DM with template (insert into dm_messages)
+ *      c. Tag contact in GHL if ghl_tag set
+ *      d. Record in dm_hand_raiser_sent
+ *
+ * @param userId - The user ID for multi-tenant support
+ * @returns HandRaiserResult with counts
+ */
+export async function processHandRaisers(
+  userId: string
+): Promise<HandRaiserResult> {
+  const supabase = createServerClient()
+  const result: HandRaiserResult = {
+    campaignsProcessed: 0,
+    commentsChecked: 0,
+    dmsSent: 0,
+    errors: 0,
+    errorDetails: [],
+  }
+
+  console.log(`[Sync Engine] Starting hand-raiser processing for user: ${userId}`)
+
+  try {
+    // Get user's sync config for the Skool client
+    const { data: syncConfig, error: configError } = await supabase
+      .from('dm_sync_config')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('enabled', true)
+      .single()
+
+    if (configError || !syncConfig) {
+      console.log(`[Sync Engine] No enabled sync config for user: ${userId}`)
+      return result
+    }
+
+    // Get active hand-raiser campaigns for this user
+    const { data: campaigns, error: campaignsError } = await supabase
+      .from('dm_hand_raiser_campaigns')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+
+    if (campaignsError) {
+      throw new Error(`Failed to fetch campaigns: ${campaignsError.message}`)
+    }
+
+    if (!campaigns || campaigns.length === 0) {
+      console.log(`[Sync Engine] No active hand-raiser campaigns for user: ${userId}`)
+      return result
+    }
+
+    console.log(`[Sync Engine] Found ${campaigns.length} active campaigns`)
+
+    // Initialize Skool client
+    const skoolClient = createSkoolDmClient(syncConfig.skool_community_slug)
+
+    // Process each campaign
+    for (const campaign of campaigns as HandRaiserCampaignRow[]) {
+      try {
+        const campaignResult = await processHandRaiserCampaign(
+          userId,
+          campaign,
+          syncConfig.ghl_location_id,
+          skoolClient,
+          supabase
+        )
+
+        result.campaignsProcessed++
+        result.commentsChecked += campaignResult.commentsChecked
+        result.dmsSent += campaignResult.dmsSent
+        result.errors += campaignResult.errors
+
+        // Rate limiting between campaigns
+        await delay(REQUEST_DELAY_MS)
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        console.error(
+          `[Sync Engine] Error processing campaign ${campaign.id}:`,
+          errorMessage
+        )
+        result.errors++
+        result.errorDetails.push({
+          campaignId: campaign.id,
+          error: errorMessage,
+        })
+      }
+    }
+
+    console.log(
+      `[Sync Engine] Hand-raiser processing complete: campaigns=${result.campaignsProcessed}, comments=${result.commentsChecked}, dms=${result.dmsSent}, errors=${result.errors}`
+    )
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('[Sync Engine] Fatal error during hand-raiser processing:', errorMessage)
+    result.errors++
+    result.errorDetails.push({
+      error: `Fatal error: ${errorMessage}`,
+    })
+  }
+
+  return result
+}
+
+/**
+ * Process a single hand-raiser campaign
+ */
+async function processHandRaiserCampaign(
+  userId: string,
+  campaign: HandRaiserCampaignRow,
+  ghlLocationId: string,
+  skoolClient: SkoolDmClient,
+  supabase: ReturnType<typeof createServerClient>
+): Promise<{ commentsChecked: number; dmsSent: number; errors: number }> {
+  const result = { commentsChecked: 0, dmsSent: 0, errors: 0 }
+
+  console.log(`[Sync Engine] Processing campaign: ${campaign.id} for post: ${campaign.post_url}`)
+
+  // Parse post URL to get postId and communitySlug
+  let postId = campaign.skool_post_id
+  let communitySlug: string | undefined
+
+  if (!postId) {
+    const parsed = skoolClient.parsePostIdFromUrl(campaign.post_url)
+    postId = parsed.postId
+    communitySlug = parsed.communitySlug
+
+    // Update campaign with parsed postId for future runs
+    await supabase
+      .from('dm_hand_raiser_campaigns')
+      .update({ skool_post_id: postId })
+      .eq('id', campaign.id)
+  }
+
+  // Fetch comments for this post
+  const comments = await skoolClient.getPostComments(postId, communitySlug)
+  result.commentsChecked = comments.length
+
+  console.log(`[Sync Engine] Found ${comments.length} comments on post`)
+
+  if (comments.length === 0) {
+    return result
+  }
+
+  // Get already-sent user IDs for this campaign
+  const { data: sentRecords } = await supabase
+    .from('dm_hand_raiser_sent')
+    .select('skool_user_id')
+    .eq('campaign_id', campaign.id)
+
+  const sentUserIds = new Set((sentRecords || []).map((r) => r.skool_user_id))
+
+  // Filter comments
+  const newComments = comments.filter((comment) => {
+    // Skip if already sent DM
+    if (sentUserIds.has(comment.userId)) {
+      return false
+    }
+
+    // Filter by keyword if configured
+    if (campaign.keyword_filter) {
+      const keywords = campaign.keyword_filter
+        .split(',')
+        .map((k) => k.trim().toLowerCase())
+      const commentLower = comment.content.toLowerCase()
+      const hasKeyword = keywords.some((keyword) =>
+        commentLower.includes(keyword)
+      )
+      if (!hasKeyword) {
+        return false
+      }
+    }
+
+    return true
+  })
+
+  console.log(`[Sync Engine] ${newComments.length} new comments to process (after filtering)`)
+
+  // Process each new commenter
+  for (const comment of newComments) {
+    try {
+      // Find or create GHL contact
+      const contactResult = await findOrCreateGhlContact(
+        userId,
+        comment.userId,
+        comment.username,
+        comment.displayName
+      )
+
+      // Tag contact in GHL if configured
+      if (campaign.ghl_tag && contactResult.ghlContactId) {
+        await tagGhlContact(contactResult.ghlContactId, campaign.ghl_tag)
+      }
+
+      // Prepare DM message from template
+      const dmMessage = interpolateTemplate(campaign.dm_template, {
+        name: comment.displayName || comment.username,
+        username: comment.username,
+      })
+
+      // Get or create conversation with the user
+      const conversation = await skoolClient.getOrCreateConversation(comment.userId)
+
+      // Queue DM in dm_messages table with status 'pending'
+      const messageRow: Omit<DmMessageRow, 'id'> = {
+        user_id: userId,
+        skool_conversation_id: conversation.channelId,
+        skool_message_id: `hr-${campaign.id}-${comment.userId}-${Date.now()}`, // Synthetic ID for hand-raiser
+        ghl_message_id: null,
+        skool_user_id: comment.userId,
+        direction: 'outbound',
+        message_text: dmMessage,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        synced_at: null,
+      }
+
+      const { error: insertError } = await supabase
+        .from('dm_messages')
+        .insert(messageRow)
+
+      if (insertError) {
+        throw new Error(`Failed to queue DM: ${insertError.message}`)
+      }
+
+      // Record in dm_hand_raiser_sent to prevent duplicates
+      const { error: sentError } = await supabase
+        .from('dm_hand_raiser_sent')
+        .insert({
+          campaign_id: campaign.id,
+          skool_user_id: comment.userId,
+        })
+
+      if (sentError) {
+        // Log but don't fail - the DM is already queued
+        console.error(
+          `[Sync Engine] Failed to record sent status: ${sentError.message}`
+        )
+      }
+
+      result.dmsSent++
+      console.log(
+        `[Sync Engine] Queued hand-raiser DM for ${comment.username} (${comment.userId})`
+      )
+
+      // Rate limiting
+      await delay(REQUEST_DELAY_MS)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      console.error(
+        `[Sync Engine] Error processing commenter ${comment.userId}:`,
+        errorMessage
+      )
+      result.errors++
+    }
+  }
+
+  return result
+}
+
+/**
+ * Tag a GHL contact with a specific tag
+ */
+async function tagGhlContact(
+  contactId: string,
+  tag: string
+): Promise<void> {
+  const GHL_API_BASE = 'https://services.leadconnectorhq.com'
+  const apiKey = process.env.GHL_API_KEY
+
+  if (!apiKey) {
+    console.warn('[Sync Engine] GHL_API_KEY not set, skipping contact tagging')
+    return
+  }
+
+  try {
+    const response = await fetch(`${GHL_API_BASE}/contacts/${contactId}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        Version: '2021-07-28',
+      },
+      body: JSON.stringify({
+        tags: [tag],
+      }),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`[Sync Engine] Failed to tag contact: ${response.status} - ${errorText}`)
+    } else {
+      console.log(`[Sync Engine] Tagged contact ${contactId} with "${tag}"`)
+    }
+  } catch (error) {
+    console.error('[Sync Engine] Error tagging contact:', error)
+  }
+}
+
+/**
+ * Interpolate template variables
+ *
+ * Supports: {{name}}, {{username}}
+ */
+function interpolateTemplate(
+  template: string,
+  variables: Record<string, string>
+): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+    return variables[key] || match
+  })
+}
+
+/**
+ * Get all users with active hand-raiser campaigns
+ */
+export async function getUsersWithActiveHandRaisers(): Promise<
+  Array<{ user_id: string }>
+> {
+  const supabase = createServerClient()
+
+  const { data, error } = await supabase
+    .from('dm_hand_raiser_campaigns')
+    .select('user_id')
+    .eq('is_active', true)
+
+  if (error) {
+    console.error('[Sync Engine] Error fetching hand-raiser users:', error.message)
+    return []
+  }
+
+  // Deduplicate user IDs
+  const uniqueUserIds = [...new Set((data || []).map((d) => d.user_id))]
+  return uniqueUserIds.map((user_id) => ({ user_id }))
 }
 
 /**

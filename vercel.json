@@ -10,5 +10,11 @@
       "destination": "https://open.spotify.com/playlist/5xFAYhRQQaOnMPbmyq49lf",
       "permanent": true
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/hand-raiser-check",
+      "schedule": "*/15 * * * *"
+    }
   ]
 }
