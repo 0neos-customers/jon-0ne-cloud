@@ -64,8 +64,14 @@ export {
   isSyntheticEmail,
   normalizeName,
   calculateNameSimilarity,
+  // New exports for Phase 3
+  findOrCreateGhlContact,
+  findGhlContactsForUsers,
+  extractMemberEmail,
+  extractMemberPhone,
   type ContactMapperConfig,
-  type MatchStrategy,
+  type MatchMethod,
+  type ContactLookupResult,
 } from './lib/contact-mapper'
 
 // =============================================================================
