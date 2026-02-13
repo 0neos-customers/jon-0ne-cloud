@@ -1,9 +1,20 @@
 'use client'
 
 import useSWR from 'swr'
-import type { HandRaiserCampaignRow, CreateHandRaiserCampaignInput } from '../types'
+import type { HandRaiserCampaignRow } from '../types'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
+
+/**
+ * Input for creating a hand-raiser campaign (API format - snake_case)
+ */
+export interface CreateHandRaiserInput {
+  post_url: string
+  dm_template: string
+  keyword_filter?: string | null
+  ghl_tag?: string | null
+  is_active?: boolean
+}
 
 /**
  * Hand-raiser campaign with aggregated stats
@@ -52,7 +63,7 @@ export function useHandRaisers(options: UseHandRaisersOptions = {}): UseHandRais
  * Create a new hand-raiser campaign
  */
 export async function createHandRaiser(
-  input: CreateHandRaiserCampaignInput
+  input: CreateHandRaiserInput
 ): Promise<{ campaign?: HandRaiserCampaignRow; error?: string }> {
   try {
     const response = await fetch('/api/dm-sync/hand-raisers', {

@@ -133,4 +133,5 @@ export {
   updateHandRaiser,
   deleteHandRaiser,
   type HandRaiserCampaignWithStats,
+  type CreateHandRaiserInput,
 } from './hooks/use-hand-raisers'

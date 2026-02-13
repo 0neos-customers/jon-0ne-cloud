@@ -8,7 +8,7 @@
 ## Quick Resume
 
 **Last Updated:** 2026-02-13
-**Current Focus:** None - all features deployed
+**Current Focus:** Hand-Raiser Campaign UI
 
 ---
 
@@ -16,6 +16,8 @@
 
 | Feature | Status | BUILD-STATE Location |
 |---------|--------|---------------------|
+| Hand-Raiser UI | 🔄 Ready | `sections/hand-raiser-ui/BUILD-STATE.md` |
+| Cron Fix + Sync Dashboard | ✅ Complete | `sections/sync-dashboard/BUILD-STATE.md` |
 | Skool-GHL DM Sync | ✅ Complete | `sections/skool-sync/BUILD-STATE.md` |
 | Skool Scheduler | ✅ Complete | `sections/skool-scheduler/BUILD-STATE.md` |
 | GHL Media Manager | ✅ Complete | `sections/media/BUILD-STATE.md` |
@@ -30,32 +32,18 @@
 
 ## Next Actions
 
-No active blockers. All features deployed.
+### Hand-Raiser Campaign UI
+**Build UI to manage Hand-Raiser campaigns (auto-DM Skool commenters)**
+
+**To deploy:** Read `sections/hand-raiser-ui/BUILD-STATE.md` and deploy 4 phases using multi-agent workflow:
+1. Spawn Phases 1-3 in parallel (API, Hook, Dialog)
+2. Then Phase 4 (Page + Navigation)
 
 ---
 
 ## Blockers / Decisions Needed
 
 None currently.
-
----
-
-## TODO: Review Cron Schedules
-
-Now on Vercel Pro, review all cron jobs and set optimal intervals:
-
-| Cron | Current | Location | Notes |
-|------|---------|----------|-------|
-| sync-skool-dms | */5 * * * * | apps/web/vercel.json | Inbound DM sync |
-| send-pending-dms | */5 * * * * | apps/web/vercel.json | Outbound DM send |
-| hand-raiser-check | */15 * * * * | vercel.json | Auto-DM campaigns |
-| sync-ghl | 0 4 * * * | apps/web/vercel.json | Daily GHL sync |
-| sync-skool | 0 5 * * * | apps/web/vercel.json | Daily Skool sync |
-| sync-meta | 0 6 * * * | apps/web/vercel.json | Daily Meta ads sync |
-| aggregate | 0 7 * * * | apps/web/vercel.json | Daily aggregation |
-| send-daily-snapshot | 0 8 * * * | apps/web/vercel.json | Daily notification |
-
-**Consider:** Consolidating vercel.json files (root vs apps/web)
 
 ---
 
