@@ -142,3 +142,59 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
+/**
+ * POST /api/settings/sync-log
+ * Cleanup stuck running jobs
+ *
+ * Body: { action: 'cleanup-stuck', olderThanMinutes?: number }
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = createServerClient()
+    const body = await request.json()
+
+    if (body.action !== 'cleanup-stuck') {
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+    }
+
+    // Default to jobs running for more than 10 minutes
+    const olderThanMinutes = body.olderThanMinutes || 10
+    const cutoffTime = new Date(Date.now() - olderThanMinutes * 60 * 1000).toISOString()
+
+    // Update all stuck running jobs to failed
+    const { data, error } = await supabase
+      .from('sync_activity_log')
+      .update({
+        status: 'failed',
+        completed_at: new Date().toISOString(),
+        error_message: `Timed out after ${olderThanMinutes} minutes (cleanup)`,
+      })
+      .eq('status', 'running')
+      .lt('started_at', cutoffTime)
+      .select('id')
+
+    if (error) {
+      console.error('[sync-log API] Cleanup error:', error)
+      return NextResponse.json(
+        { error: 'Failed to cleanup stuck jobs', details: error.message },
+        { status: 500 }
+      )
+    }
+
+    const cleanedUp = data?.length || 0
+    console.log(`[sync-log API] Cleaned up ${cleanedUp} stuck jobs`)
+
+    return NextResponse.json({
+      success: true,
+      cleanedUp,
+      cutoffTime,
+    })
+  } catch (error) {
+    console.error('[sync-log API] POST Error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error', details: String(error) },
+      { status: 500 }
+    )
+  }
+}
