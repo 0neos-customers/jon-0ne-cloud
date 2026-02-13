@@ -8,7 +8,7 @@
 ## Quick Resume
 
 **Last Updated:** 2026-02-13
-**Current Focus:** Skool-GHL DM Sync (All 7 phases deployed, awaiting OAuth)
+**Current Focus:** None - all features deployed
 
 ---
 
@@ -16,7 +16,7 @@
 
 | Feature | Status | BUILD-STATE Location |
 |---------|--------|---------------------|
-| Skool-GHL DM Sync | 🔄 Awaiting OAuth setup | `sections/skool-sync/BUILD-STATE.md` |
+| Skool-GHL DM Sync | ✅ Complete | `sections/skool-sync/BUILD-STATE.md` |
 | Skool Scheduler | ✅ Complete | `sections/skool-scheduler/BUILD-STATE.md` |
 | GHL Media Manager | ✅ Complete | `sections/media/BUILD-STATE.md` |
 
@@ -30,25 +30,13 @@
 
 ## Next Actions
 
-### Skool-GHL DM Sync
-Cloud-only integration to sync Skool DMs with GHL unified inbox.
-
-**✅ Marketplace App Ready** (credentials in Vercel)
-
-**To start Phase 1:** Read `sections/skool-sync/BUILD-STATE.md` and deploy
-
-**Architecture:**
-```
-Vercel Cron → Skool API (SKOOL_COOKIES) → Supabase → GHL Conversation Provider API (Marketplace)
-```
-
-**Key Requirement:** 100% contact match rate (no duplicates, no synthetic contacts)
+No active blockers. All features deployed.
 
 ---
 
 ## Blockers / Decisions Needed
 
-1. **Jimmy Action:** Add `EXTERNAL_API_KEY` to Vercel environment (for Skool Post Drafts API)
+None currently.
 
 ---
 
@@ -102,3 +90,4 @@ See `COMPLETED-FEATURES.md` for full archive. Summary:
 - ✅ Source Filtering System
 - ✅ Expenses System Upgrade
 - ✅ Skool Revenue & MRR Integration
+- ✅ Skool-GHL DM Sync (bidirectional DM sync with GHL unified inbox)
