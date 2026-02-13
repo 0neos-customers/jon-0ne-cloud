@@ -75,18 +75,19 @@ export async function GET(request: Request) {
       code: code?.substring(0, 10) + '...',
     })
 
-    // GHL OAuth requires JSON body for authorization_code exchange
+    // GHL OAuth requires form-urlencoded (confirmed by their error message)
+    // Trim values to ensure no whitespace issues
     const response = await fetch(GHL_OAUTH_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
         Accept: 'application/json',
       },
-      body: JSON.stringify({
-        client_id: clientId,
-        client_secret: clientSecret,
+      body: new URLSearchParams({
+        client_id: clientId.trim(),
+        client_secret: clientSecret.trim(),
         grant_type: 'authorization_code',
-        code,
+        code: code.trim(),
         redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/marketplace/callback`,
         user_type: 'Location',
       }),
