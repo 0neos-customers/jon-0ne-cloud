@@ -64,6 +64,17 @@ export async function GET(request: Request) {
 
   // Exchange code for tokens
   try {
+    const clientId = process.env.GHL_MARKETPLACE_CLIENT_ID!
+    const clientSecret = process.env.GHL_MARKETPLACE_CLIENT_SECRET!
+
+    // Log for debugging (will show in Vercel logs)
+    console.log('[OAuth] Exchanging code for tokens', {
+      hasClientId: !!clientId,
+      clientIdLength: clientId?.length,
+      hasClientSecret: !!clientSecret,
+      code: code?.substring(0, 10) + '...',
+    })
+
     const response = await fetch(GHL_OAUTH_URL, {
       method: 'POST',
       headers: {
@@ -72,10 +83,11 @@ export async function GET(request: Request) {
       },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
-        client_id: process.env.GHL_MARKETPLACE_CLIENT_ID!,
-        client_secret: process.env.GHL_MARKETPLACE_CLIENT_SECRET!,
+        client_id: clientId,
+        client_secret: clientSecret,
         code,
         redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/marketplace/callback`,
+        user_type: 'Location',
       }),
     })
 
@@ -99,6 +111,13 @@ export async function GET(request: Request) {
     <p><strong>Error:</strong> ${data.error || 'Unknown error'}</p>
     <p>${data.error_description || ''}</p>
   </div>
+  <h3>Debug Info</h3>
+  <pre>Client ID set: ${!!process.env.GHL_MARKETPLACE_CLIENT_ID}
+Client ID length: ${process.env.GHL_MARKETPLACE_CLIENT_ID?.length || 0}
+Client ID preview: ${process.env.GHL_MARKETPLACE_CLIENT_ID?.substring(0, 10)}...
+App URL: ${process.env.NEXT_PUBLIC_APP_URL}
+Redirect URI: ${process.env.NEXT_PUBLIC_APP_URL}/api/auth/marketplace/callback</pre>
+  <h3>Full Response</h3>
   <pre>${JSON.stringify(data, null, 2)}</pre>
 </body>
 </html>
