@@ -122,3 +122,15 @@ export {
   type InboundSyncResult,
   type SendPendingResult,
 } from './lib/sync-engine'
+
+// =============================================================================
+// HOOKS
+// =============================================================================
+
+export {
+  useHandRaisers,
+  createHandRaiser,
+  updateHandRaiser,
+  deleteHandRaiser,
+  type HandRaiserCampaignWithStats,
+} from './hooks/use-hand-raisers'
