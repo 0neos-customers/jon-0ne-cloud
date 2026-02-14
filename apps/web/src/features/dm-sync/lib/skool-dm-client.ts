@@ -324,7 +324,7 @@ export class SkoolDmClient {
    * @param limit - Number of conversations to fetch (default: 50)
    * @returns Array of conversations
    */
-  async getInbox(offset = 0, limit = 50): Promise<SkoolConversation[]> {
+  async getInbox(offset = 0, limit = 25): Promise<SkoolConversation[]> {
     console.log(
       `[SkoolDmClient] Fetching inbox: offset=${offset}, limit=${limit}`
     )
@@ -356,8 +356,8 @@ export class SkoolDmClient {
   async getAllInbox(): Promise<SkoolConversation[]> {
     const allConversations: SkoolConversation[] = []
     let offset = 0
-    const limit = 50
-    const maxIterations = 100 // Safety limit
+    const limit = 25 // Skool API max limit is 25
+    const maxIterations = 200 // Safety limit (increased to compensate for smaller batches)
 
     for (let i = 0; i < maxIterations; i++) {
       const conversations = await this.getInbox(offset, limit)

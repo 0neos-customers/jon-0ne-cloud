@@ -34,7 +34,7 @@ import {
 const REQUEST_DELAY_MS = 200
 
 /** Maximum conversations to sync in a single run */
-const DEFAULT_MAX_CONVERSATIONS = 50
+const DEFAULT_MAX_CONVERSATIONS = 25 // Skool API max limit is 25
 
 /** Maximum messages per conversation to sync */
 const DEFAULT_MAX_MESSAGES_PER_CONVERSATION = 100
