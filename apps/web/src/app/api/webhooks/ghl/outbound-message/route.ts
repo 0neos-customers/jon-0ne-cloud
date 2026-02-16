@@ -225,18 +225,41 @@ export async function POST(request: Request) {
     })
 
     // 7. Look up the real Skool conversation ID from previous messages with this user
-    const { data: existingConversation } = await supabase
+    // Note: dm_messages.user_id stores Skool user ID (staff), not Clerk user ID
+    const staffSkoolId = staff?.skoolUserId
+
+    console.log('[GHL Webhook] Looking up conversation with:', {
+      skool_user_id: typedMapping.skool_user_id,
+      staffSkoolId,
+    })
+
+    // First try with staff's Skool ID
+    let conversationResult = await supabase
       .from('dm_messages')
       .select('skool_conversation_id')
       .eq('skool_user_id', typedMapping.skool_user_id)
-      .eq('user_id', typedMapping.user_id)
-      .not('skool_conversation_id', 'like', 'ghl:%')  // Exclude placeholder IDs
+      .eq('user_id', staffSkoolId || '')
+      .not('skool_conversation_id', 'like', 'ghl:%')
       .limit(1)
       .single()
 
-    if (!existingConversation?.skool_conversation_id) {
+    // Fallback: just match by Skool user (ignore user_id)
+    if (!conversationResult.data?.skool_conversation_id) {
+      console.log('[GHL Webhook] Primary lookup failed, trying fallback without user_id filter')
+      conversationResult = await supabase
+        .from('dm_messages')
+        .select('skool_conversation_id')
+        .eq('skool_user_id', typedMapping.skool_user_id)
+        .not('skool_conversation_id', 'like', 'ghl:%')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+    }
+
+    if (!conversationResult.data?.skool_conversation_id) {
       console.error('[GHL Webhook] No Skool conversation found for user:', {
         skoolUserId: typedMapping.skool_user_id,
+        staffSkoolId,
         contactId,
       })
       // Return 200 to acknowledge - can't route without conversation
@@ -247,7 +270,7 @@ export async function POST(request: Request) {
       })
     }
 
-    const skoolConversationId = existingConversation.skool_conversation_id
+    const skoolConversationId = conversationResult.data.skool_conversation_id
     console.log('[GHL Webhook] Found Skool conversation:', skoolConversationId)
 
     // Generate a unique message ID for Skool (will be updated when actually sent)
@@ -260,8 +283,9 @@ export async function POST(request: Request) {
 
     // 9. Queue message for sending via Skool API
     // Insert into dm_messages with direction='outbound', status='pending'
+    // Note: user_id should be Skool ID (staff), not Clerk ID
     const messageInsert: DmMessageInsert = {
-      user_id: typedMapping.user_id,
+      user_id: staffSkoolId || typedMapping.skool_user_id,  // Use staff's Skool ID
       skool_conversation_id: skoolConversationId,
       skool_message_id: pendingSkoolMessageId,
       ghl_message_id: messageId || null,
