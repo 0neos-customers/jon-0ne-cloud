@@ -60,7 +60,7 @@ export async function GET(
       .from('dm_messages')
       .select('id, skool_user_id, direction, message_text, sender_name, status, created_at')
       .eq('skool_conversation_id', conversationId)
-      .order('created_at', { ascending: true }) // Chronological order
+      .order('created_at', { ascending: false }) // Newest first
 
     // Apply pagination if 'before' timestamp provided
     if (before) {
@@ -118,9 +118,9 @@ export async function GET(
       created_at: msg.created_at,
     }))
 
-    // Get oldest timestamp for pagination
+    // Get oldest timestamp for pagination (last item when sorted newest-first)
     const oldestTimestamp = actualMessages.length > 0
-      ? actualMessages[0].created_at
+      ? actualMessages[actualMessages.length - 1].created_at
       : null
 
     return NextResponse.json({
