@@ -7,7 +7,7 @@
  * Displays header with participant info and external links.
  */
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button, Input } from '@0ne/ui'
 import { Send, Loader2, ExternalLink, RefreshCw } from 'lucide-react'
 import { useConversationDetail } from '../hooks/use-conversation-detail'
@@ -35,11 +35,17 @@ const SKOOL_COMMUNITY_SLUG = 'skool-games' // TODO: Get from config
 export function ConversationDetail({ conversationId, staffSkoolId }: ConversationDetailProps) {
   const [inputValue, setInputValue] = useState('')
   const [sendError, setSendError] = useState<string | null>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const { conversation, messages, isLoading, error, refresh, sendMessage, isSending } =
     useConversationDetail(conversationId)
 
-  // With newest-first sort, no auto-scroll needed - user sees newest at top
+  // Auto-scroll to bottom when messages load or change (iMessage style)
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages])
 
   const handleSend = async () => {
     if (!inputValue.trim() || isSending || !staffSkoolId) return
@@ -150,6 +156,7 @@ export function ConversationDetail({ conversationId, staffSkoolId }: Conversatio
             <MessageBubble key={message.id} message={message} />
           ))
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Send Error */}
