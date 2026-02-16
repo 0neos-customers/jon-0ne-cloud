@@ -135,8 +135,9 @@ export async function GET(request: NextRequest) {
     // Build conversation list with participant info
     let conversations: Conversation[] = Array.from(conversationMap.values()).map((conv) => {
       const userInfo = userMap.get(conv.skool_user_id)
-      // Try sender_name from last message if no mapping
-      const senderName = conv.last_message?.sender_name
+      // Try sender_name from an INBOUND message (the participant's message, not ours)
+      const inboundMessage = conv.messages.find((m) => m.direction === 'inbound')
+      const senderName = inboundMessage?.sender_name || conv.last_message?.sender_name
 
       return {
         conversation_id: conv.conversation_id,
