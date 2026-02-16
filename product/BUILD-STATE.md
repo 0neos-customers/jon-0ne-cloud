@@ -8,7 +8,15 @@
 ## Quick Resume
 
 **Last Updated:** 2026-02-16
-**Current Focus:** Skool Inbox complete - Test at /skool-sync/inbox
+**Current Focus:** GHL ↔ Skool bidirectional sync WORKING - cleanup tasks below
+
+**Session 2026-02-16 Summary:**
+- ✅ Fixed GHL → Skool outbound messaging (webhook wasn't working)
+- ✅ Fixed signature verification (GHL CP webhooks don't use signatures)
+- ✅ Fixed message field mapping (`message` not `body`)
+- ✅ Fixed user ID mismatch (Clerk vs Skool ID)
+- ✅ Removed prefix from outbound Skool messages
+- ✅ Added conversationProviderId validation for security
 
 ---
 
@@ -16,12 +24,12 @@
 
 | Feature | Status | BUILD-STATE Location |
 |---------|--------|---------------------|
+| Skool-GHL DM Sync | ✅ Working | `sections/skool-sync/BUILD-STATE.md` |
 | Skool Inbox | ✅ Complete | `sections/skool-inbox/BUILD-STATE.md` |
 | Hand-Raiser Extension Routing | 🔄 Deploy | `sections/hand-raiser-extension-routing/BUILD-STATE.md` |
 | Skool Chrome Extension | 🔄 Planning | `sections/skool-extension/BUILD-STATE.md` |
 | Hand-Raiser UI | ✅ Complete | `sections/hand-raiser-ui/BUILD-STATE.md` |
 | Cron Fix + Sync Dashboard | ✅ Complete | `sections/sync-dashboard/BUILD-STATE.md` |
-| Skool-GHL DM Sync | ⚠️ Limited | `sections/skool-sync/BUILD-STATE.md` |
 | Skool Scheduler | ✅ Complete | `sections/skool-scheduler/BUILD-STATE.md` |
 | GHL Media Manager | ✅ Complete | `sections/media/BUILD-STATE.md` |
 
@@ -62,6 +70,21 @@
 
 ---
 
+## Cleanup Tasks (from 2026-02-16 session)
+
+1. **Clean up old pending GHL messages** (~3500 messages older than 24 hours)
+   ```sql
+   UPDATE dm_messages SET status = 'failed'
+   WHERE source = 'ghl' AND status = 'pending'
+   AND created_at < NOW() - INTERVAL '24 hours';
+   ```
+
+2. **Fix Vercel env var** - Remove trailing newline from `GHL_CONVERSATION_PROVIDER_ID`
+
+3. **Optional: Reduce webhook logging** - Currently verbose for debugging, can trim later
+
+---
+
 ## Blockers / Decisions Needed
 
 None currently.
@@ -99,4 +122,4 @@ See `COMPLETED-FEATURES.md` for full archive. Summary:
 - ✅ Source Filtering System
 - ✅ Expenses System Upgrade
 - ✅ Skool Revenue & MRR Integration
-- ✅ Skool-GHL DM Sync (bidirectional DM sync with GHL unified inbox)
+- ✅ Skool-GHL DM Sync (bidirectional - Skool↔GHL↔0ne Inbox all working as of 2026-02-16)
