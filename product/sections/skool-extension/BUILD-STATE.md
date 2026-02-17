@@ -746,6 +746,9 @@ COMMIT: "Phase {X.Y}: {Description}"
 - Killed `sync-skool` cron (was broken since WAF discovery)
 - `sync-skool-dms` cron now only processes extension-captured data → GHL (no server-side fetch)
 
+**Pending Action (awaiting Jimmy's greenlight):**
+- ~3500 backfilled Skool DM messages sitting in `dm_messages` with `status='pending'` — these are historical messages pulled from Skool during backfill, NOT failures. They need to be synced to GHL once debugging is complete and Jimmy gives the go-ahead.
+
 **Remaining Optional:**
 - Phase 2B: Auto-scroll history capture (may not be needed with Phase 12 backfill)
 - Phase 10.9: Scheduled post queue in popup UI (deferred)

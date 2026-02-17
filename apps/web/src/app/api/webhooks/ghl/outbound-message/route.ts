@@ -67,33 +67,15 @@ interface ContactMappingRow {
 export async function POST(request: Request) {
   const startTime = Date.now()
 
-  // Log immediately to confirm webhook is being called
-  console.log('[GHL Webhook] ========== WEBHOOK HIT ==========')
-  console.log('[GHL Webhook] Timestamp:', new Date().toISOString())
-  console.log('[GHL Webhook] Headers:', Object.fromEntries(request.headers.entries()))
-
   try {
-    // 1. Get raw body for signature verification
+    // 1. Get raw body
     const rawBody = await request.text()
-    console.log('[GHL Webhook] Raw body length:', rawBody.length)
-    console.log('[GHL Webhook] Raw body preview:', rawBody.slice(0, 200))
 
     // 2. Webhook Security Notes:
     // - Standard GHL webhooks use x-wh-signature header with RSA-SHA256 + public key
     // - Conversation Provider webhooks do NOT include signatures (confirmed via GHL docs)
     // - Security relies on: (1) URL secrecy, (2) locationId validation, (3) conversationProviderId match
     // Reference: https://marketplace.gohighlevel.com/docs/webhook/ProviderOutboundMessage/index.html
-
-    const signature = request.headers.get('x-wh-signature') || ''
-
-    console.log('[GHL Webhook] Security check:', {
-      hasSignature: !!signature,
-      signatureLength: signature?.length || 0,
-      note: 'Conversation Provider webhooks do not include signatures by design',
-    })
-
-    // If GHL ever starts sending signatures for CP webhooks, we should verify them
-    // Currently (as of 2026), they don't, so we proceed without signature verification
 
     // 3. Parse payload
     let payload: GhlOutboundMessagePayload
@@ -121,19 +103,15 @@ export async function POST(request: Request) {
       rawPayload.messageBody
     ) as string | undefined
 
-    console.log('[GHL Webhook] Payload fields:', Object.keys(rawPayload))
-    console.log('[GHL Webhook] Full payload:', JSON.stringify(rawPayload).slice(0, 500))
-
     if (!contactId || !messageText || !conversationId || !locationId) {
       console.error('[GHL Webhook] Missing required fields:', {
         hasContactId: !!contactId,
         hasMessageText: !!messageText,
         hasConversationId: !!conversationId,
         hasLocationId: !!locationId,
-        availableFields: Object.keys(rawPayload),
       })
       return NextResponse.json(
-        { error: 'Missing required fields', availableFields: Object.keys(rawPayload) },
+        { error: 'Missing required fields' },
         { status: 400 }
       )
     }
@@ -143,38 +121,18 @@ export async function POST(request: Request) {
 
     // 4b. Validate conversationProviderId matches our registered provider (extra security)
     const incomingProviderId = rawPayload.conversationProviderId as string | undefined
-    const expectedProviderId = process.env.GHL_CONVERSATION_PROVIDER_ID?.trim()  // Trim whitespace/newlines
+    const expectedProviderId = process.env.GHL_CONVERSATION_PROVIDER_ID?.trim()
 
     if (expectedProviderId && incomingProviderId && incomingProviderId !== expectedProviderId) {
-      console.error('[GHL Webhook] Provider ID mismatch:', {
-        incoming: incomingProviderId,
-        expected: expectedProviderId,
-      })
+      console.error('[GHL Webhook] Provider ID mismatch')
       return NextResponse.json(
         { error: 'Invalid conversation provider' },
         { status: 403 }
       )
     }
 
-    console.log('[GHL Webhook] Processing outbound message:', {
-      contactId,
-      conversationId,
-      locationId,
-      messageLength: body.length,
-      messageId,
-      conversationProviderId: incomingProviderId,
-      replyToAltId: payload.replyToAltId,
-    })
-
     // 5. Look up Skool user from dm_contact_mappings (by ghl_contact_id)
     const supabase = createServerClient()
-
-    // Debug: Check total mapping count first
-    const { count: mappingCount } = await supabase
-      .from('dm_contact_mappings')
-      .select('*', { count: 'exact', head: true })
-
-    console.log('[GHL Webhook] Total contact mappings in DB:', mappingCount)
 
     const { data: mapping, error: mappingError } = await supabase
       .from('dm_contact_mappings')
@@ -183,21 +141,7 @@ export async function POST(request: Request) {
       .single()
 
     if (mappingError || !mapping) {
-      // Debug: Show sample mappings to help identify issue
-      const { data: sampleMappings } = await supabase
-        .from('dm_contact_mappings')
-        .select('ghl_contact_id, skool_user_id, skool_username')
-        .limit(3)
-
-      console.error('[GHL Webhook] Contact mapping not found:', {
-        contactId,
-        error: mappingError?.message,
-        totalMappings: mappingCount,
-        sampleMappings: sampleMappings?.map(m => ({
-          ghlContactId: m.ghl_contact_id?.slice(0, 8) + '...',
-          skoolUsername: m.skool_username,
-        })),
-      })
+      console.error('[GHL Webhook] Contact mapping not found for:', contactId)
       // Return 200 to acknowledge receipt - we can't process but shouldn't retry
       return NextResponse.json({
         success: false,
@@ -209,15 +153,8 @@ export async function POST(request: Request) {
 
     const typedMapping = mapping as ContactMappingRow
 
-    console.log('[GHL Webhook] Found Skool mapping:', {
-      skoolUserId: typedMapping.skool_user_id,
-      skoolUsername: typedMapping.skool_username,
-      userId: typedMapping.user_id,
-    })
-
     // 6. Phase 5: Resolve which staff should send this message
     // Extract GHL user ID from payload if available (depends on GHL webhook format)
-    // GHL webhook may include userId field for the sender
     const ghlSenderUserId = (payload as unknown as Record<string, unknown>).userId as string | undefined
 
     const { staff, processedMessage } = await resolveOutboundStaff(
@@ -227,21 +164,9 @@ export async function POST(request: Request) {
       typedMapping.skool_user_id
     )
 
-    console.log('[GHL Webhook] Resolved staff for outbound:', {
-      staffSkoolId: staff?.skoolUserId,
-      staffDisplayName: staff?.displayName,
-      matchMethod: staff?.matchMethod,
-      hasOverride: processedMessage !== body,
-    })
-
     // 7. Look up the real Skool conversation ID from previous messages with this user
     // Note: dm_messages.user_id stores Skool user ID (staff), not Clerk user ID
     const staffSkoolId = staff?.skoolUserId
-
-    console.log('[GHL Webhook] Looking up conversation with:', {
-      skool_user_id: typedMapping.skool_user_id,
-      staffSkoolId,
-    })
 
     // First try with staff's Skool ID
     let conversationResult = await supabase
@@ -255,7 +180,6 @@ export async function POST(request: Request) {
 
     // Fallback: just match by Skool user (ignore user_id)
     if (!conversationResult.data?.skool_conversation_id) {
-      console.log('[GHL Webhook] Primary lookup failed, trying fallback without user_id filter')
       conversationResult = await supabase
         .from('dm_messages')
         .select('skool_conversation_id')
@@ -267,11 +191,7 @@ export async function POST(request: Request) {
     }
 
     if (!conversationResult.data?.skool_conversation_id) {
-      console.error('[GHL Webhook] No Skool conversation found for user:', {
-        skoolUserId: typedMapping.skool_user_id,
-        staffSkoolId,
-        contactId,
-      })
+      console.error('[GHL Webhook] No Skool conversation found for user:', typedMapping.skool_user_id)
       // Return 200 to acknowledge - can't route without conversation
       return NextResponse.json({
         success: false,
@@ -281,7 +201,6 @@ export async function POST(request: Request) {
     }
 
     const skoolConversationId = conversationResult.data.skool_conversation_id
-    console.log('[GHL Webhook] Found Skool conversation:', skoolConversationId)
 
     // Generate a unique message ID for Skool (will be updated when actually sent)
     const pendingSkoolMessageId = `pending:${Date.now()}:${Math.random().toString(36).substring(7)}`
@@ -317,7 +236,7 @@ export async function POST(request: Request) {
       .single()
 
     if (insertError) {
-      console.error('[GHL Webhook] Failed to queue message:', insertError)
+      console.error('[GHL Webhook] Failed to queue message:', insertError.message)
       return NextResponse.json(
         {
           success: false,
@@ -329,15 +248,9 @@ export async function POST(request: Request) {
     }
 
     const duration = Date.now() - startTime
+    console.log('[GHL Webhook] Queued outbound message', insertedMessage?.id, 'in', duration + 'ms')
 
-    console.log('[GHL Webhook] Message queued successfully:', {
-      queuedMessageId: insertedMessage?.id,
-      skoolUserId: typedMapping.skool_user_id,
-      skoolUsername: typedMapping.skool_username,
-      duration,
-    })
-
-    // 8. Return 200 OK
+    // 10. Return 200 OK
     return NextResponse.json({
       success: true,
       queued: true,

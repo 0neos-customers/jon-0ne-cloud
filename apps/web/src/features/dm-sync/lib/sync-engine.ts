@@ -196,7 +196,7 @@ export async function syncInboundMessages(
     const ghlClient = await createGhlConversationProviderClientWithPersistence(
       userId,
       syncConfig.ghl_location_id,
-      process.env.GHL_CONVERSATION_PROVIDER_ID,
+      process.env.GHL_CONVERSATION_PROVIDER_ID?.trim(),
       storedTokens ? {
         refreshToken: storedTokens.refreshToken,
         accessToken: storedTokens.accessToken,
@@ -706,7 +706,7 @@ export async function syncExtensionMessages(
     const ghlClient = await createGhlConversationProviderClientWithPersistence(
       userId,
       syncConfig.ghl_location_id,
-      process.env.GHL_CONVERSATION_PROVIDER_ID,
+      process.env.GHL_CONVERSATION_PROVIDER_ID?.trim(),
       storedTokens
         ? {
             refreshToken: storedTokens.refreshToken,
