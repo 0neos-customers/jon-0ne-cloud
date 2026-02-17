@@ -8,7 +8,7 @@
 ## Quick Resume
 
 **Last Updated:** 2026-02-16
-**Current Focus:** GHL ↔ Skool bidirectional sync WORKING - cleanup tasks below
+**Current Focus:** Skool API Migration — moving ALL remaining server-side Skool calls to extension
 
 **Session 2026-02-16 Summary:**
 - ✅ Fixed GHL → Skool outbound messaging (webhook wasn't working)
@@ -28,6 +28,7 @@
 | Skool Inbox | ✅ Complete | `sections/skool-inbox/BUILD-STATE.md` |
 | Hand-Raiser Extension Routing | 🔄 Deploy | `sections/hand-raiser-extension-routing/BUILD-STATE.md` |
 | Skool Chrome Extension | ✅ Complete | `sections/skool-extension/BUILD-STATE.md` |
+| Skool API Migration | 🔄 In Progress | `sections/skool-api-migration/BUILD-STATE.md` |
 | Hand-Raiser UI | ⬜ Planned | `sections/hand-raiser-ui/BUILD-STATE.md` |
 | Cron Fix + Sync Dashboard | ✅ Complete | `sections/sync-dashboard/BUILD-STATE.md` |
 | Skool Scheduler | ✅ Complete | `sections/skool-scheduler/BUILD-STATE.md` |
@@ -71,13 +72,17 @@ None currently.
 
 ---
 
-## Architecture Note: Extension-First Skool Integration (2026-02-16)
+## Architecture Note: Extension-First Skool Integration (2026-02-17)
 
-AWS WAF blocks all server-side Skool API calls. The Chrome extension is the **sole data collector** for Skool.
+AWS WAF blocks all server-side Skool API calls. The Chrome extension is the **sole data collector** for Skool. The extension-first migration is **complete** (all 8 phases deployed).
 
 **Killed crons:**
 - `sync-skool` (daily member/KPI fetch) - removed from vercel.json
 - `syncInboundMessages` in `sync-skool-dms` - removed (server-side Skool fetch)
+- `hand-raiser-check` - removed from vercel.json (route is no-op, migrated to extension)
+- `send-pending-dms` - removed from vercel.json (server-side Skool DM sending is broken)
+- `sync-about-analytics` - route converted to no-op (data now pushed by extension)
+- `sync-member-history` - route converted to no-op (data now pushed by extension)
 
 **Active crons (non-Skool or processing only):**
 - `sync-ghl` - GHL data sync (daily)
@@ -85,8 +90,8 @@ AWS WAF blocks all server-side Skool API calls. The Chrome extension is the **so
 - `aggregate` - Data aggregation (daily)
 - `send-daily-snapshot` - Notifications (daily)
 - `sync-skool-dms` - Extension message processing → GHL only (every 5min)
-- `send-pending-dms` - Outbound DM queue (every 5min)
-- `hand-raiser-check` - Comment analysis (every 15min)
+
+**Extension-first migration complete** — see `sections/skool-api-migration/BUILD-STATE.md` for full plan. All server-side Skool API calls have been removed or converted to no-ops.
 
 ---
 
