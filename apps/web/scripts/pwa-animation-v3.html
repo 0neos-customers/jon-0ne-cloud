@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>V3: O → 0 → 0ne (Slash + Expand)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: #1a1a1a;
+      font-family: system-ui;
+    }
+    .preview-container { text-align: center; }
+    .phone-frame {
+      width: 375px;
+      height: 812px;
+      border-radius: 40px;
+      overflow: hidden;
+      border: 4px solid #333;
+      position: relative;
+      cursor: pointer;
+    }
+    .splash {
+      width: 100%;
+      height: 100%;
+      background: #FF692D;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .logo-container {
+      display: flex;
+      align-items: baseline;
+      opacity: 0;
+      position: relative;
+    }
+    .zero-wrap {
+      position: relative;
+      display: inline-block;
+    }
+    .logo-o {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-style: italic;
+      font-size: 120px;
+      color: white;
+      line-height: 1;
+    }
+    .slash {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 3.5px;
+      height: 0;
+      background: white;
+      transform: translate(-50%, -50%) rotate(20deg);
+      transform-origin: center center;
+      border-radius: 2px;
+    }
+    .logo-ne {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-style: italic;
+      font-size: 120px;
+      color: white;
+      line-height: 1;
+      overflow: hidden;
+      max-width: 0;
+      opacity: 0;
+    }
+    @keyframes fadeInO {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    @keyframes slashIn {
+      0% { height: 0; opacity: 0; }
+      15% { opacity: 1; }
+      100% { height: 130px; opacity: 1; }
+    }
+    @keyframes expandNe {
+      0% { max-width: 0; opacity: 0; }
+      10% { opacity: 1; }
+      100% { max-width: 200px; opacity: 1; }
+    }
+    @keyframes fadeOutAll {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    .animate .logo-container {
+      animation: fadeInO 0.25s ease-out forwards;
+    }
+    .animate .slash {
+      animation: slashIn 0.45s ease-out 0.5s forwards;
+    }
+    .animate .logo-ne {
+      animation: expandNe 0.55s ease-out 1.1s forwards;
+    }
+    .animate .splash {
+      animation: fadeOutAll 0.4s ease-in 2.0s forwards;
+    }
+    .instructions {
+      color: #999;
+      margin-top: 20px;
+      font-size: 14px;
+      max-width: 400px;
+    }
+    button {
+      margin-top: 16px;
+      padding: 10px 24px;
+      background: #FF692D;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover { background: #e55a20; }
+    .label {
+      color: #FF692D;
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-container">
+    <div class="label">V3: Slash + Expand (O → 0 → 0ne)</div>
+    <div class="phone-frame" id="frame">
+      <div class="splash">
+        <div class="logo-container">
+          <div class="zero-wrap">
+            <span class="logo-o">O</span>
+            <div class="slash"></div>
+          </div>
+          <span class="logo-ne">ne</span>
+        </div>
+      </div>
+    </div>
+    <p class="instructions">O appears → slash grows as / → "ne" expands right → fade out</p>
+    <button onclick="replay()">Replay Animation</button>
+  </div>
+  <script>
+    function replay() {
+      const frame = document.getElementById('frame');
+      frame.classList.remove('animate');
+      void frame.offsetWidth;
+      frame.classList.add('animate');
+    }
+    window.addEventListener('load', () => setTimeout(replay, 300));
+  </script>
+</body>
+</html>
