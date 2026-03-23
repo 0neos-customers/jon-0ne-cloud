@@ -1,12 +1,13 @@
 'use client'
 
-import { useSignIn, useSignUp } from '@clerk/nextjs'
+import { useSignIn, useSignUp, useClerk } from '@clerk/nextjs'
 import { Button } from '@0ne/ui'
 import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
 
-const providerConfig: Record<string, { label: string; icon: React.ReactNode }> = {
-  oauth_google: {
+const providers: { strategy: string; label: string; icon: React.ReactNode }[] = [
+  {
+    strategy: 'oauth_google',
     label: 'Google',
     icon: (
       <svg className="h-4 w-4" viewBox="0 0 24 24">
@@ -17,7 +18,8 @@ const providerConfig: Record<string, { label: string; icon: React.ReactNode }> =
       </svg>
     ),
   },
-  oauth_apple: {
+  {
+    strategy: 'oauth_apple',
     label: 'Apple',
     icon: (
       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
@@ -25,7 +27,8 @@ const providerConfig: Record<string, { label: string; icon: React.ReactNode }> =
       </svg>
     ),
   },
-  oauth_github: {
+  {
+    strategy: 'oauth_github',
     label: 'GitHub',
     icon: (
       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
@@ -33,53 +36,40 @@ const providerConfig: Record<string, { label: string; icon: React.ReactNode }> =
       </svg>
     ),
   },
-  oauth_microsoft: {
-    label: 'Microsoft',
-    icon: (
-      <svg className="h-4 w-4" viewBox="0 0 24 24">
-        <path fill="#F25022" d="M1 1h10v10H1z" />
-        <path fill="#00A4EF" d="M1 13h10v10H1z" />
-        <path fill="#7FBA00" d="M13 1h10v10H13z" />
-        <path fill="#FFB900" d="M13 13h10v10H13z" />
-      </svg>
-    ),
-  },
-  oauth_facebook: {
-    label: 'Facebook',
-    icon: (
-      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="#1877F2">
-        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-      </svg>
-    ),
-  },
-}
+]
 
 interface OAuthButtonsProps {
   mode: 'sign-in' | 'sign-up'
 }
 
 export function OAuthButtons({ mode }: OAuthButtonsProps) {
-  const { signIn, isLoaded: signInLoaded } = useSignIn()
-  const { signUp, isLoaded: signUpLoaded } = useSignUp()
+  const clerk = useClerk()
+  const { signIn } = useSignIn()
+  const { signUp } = useSignUp()
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  const isLoaded = mode === 'sign-in' ? signInLoaded : signUpLoaded
+  if (!clerk.loaded) return null
 
-  if (!isLoaded) return null
+  // Read enabled social providers from Clerk's environment config
+  const env = (clerk as Record<string, unknown>).__unstable__environment as
+    | { userSettings?: { social?: Record<string, { enabled: boolean }> } }
+    | undefined
+  const socialConfig = env?.userSettings?.social
 
-  // Both modes use signIn.supportedFirstFactors to discover OAuth providers
-  const oauthStrategies: string[] = []
-  const factors = signIn?.supportedFirstFactors || []
-  for (const factor of factors) {
-    if (factor.strategy?.startsWith('oauth_')) {
-      oauthStrategies.push(factor.strategy)
-    }
-  }
+  // Filter to only show providers that are enabled in Clerk
+  const enabledProviders = socialConfig
+    ? providers.filter((p) => {
+        const key = p.strategy.replace('oauth_', '')
+        return socialConfig[key]?.enabled
+      })
+    : providers // If we can't read config, show all and let Clerk handle errors
 
-  if (oauthStrategies.length === 0) return null
+  if (enabledProviders.length === 0) return null
 
   const handleOAuth = async (strategy: string) => {
     setLoadingProvider(strategy)
+    setError(null)
     try {
       if (mode === 'sign-in' && signIn) {
         await signIn.authenticateWithRedirect({
@@ -94,32 +84,35 @@ export function OAuthButtons({ mode }: OAuthButtonsProps) {
           redirectUrlComplete: '/onboarding',
         })
       }
-    } catch {
+    } catch (err: unknown) {
+      const clerkError = err as { errors?: { message: string }[] }
+      setError(clerkError.errors?.[0]?.message || 'Authentication failed')
       setLoadingProvider(null)
     }
   }
 
   return (
     <div className="flex flex-col gap-2">
-      {oauthStrategies.map((strategy) => {
-        const config = providerConfig[strategy]
-        if (!config) return null
-        const isLoading = loadingProvider === strategy
+      {error && (
+        <p className="text-sm text-red-600 text-center">{error}</p>
+      )}
+      {enabledProviders.map((provider) => {
+        const isLoading = loadingProvider === provider.strategy
         return (
           <Button
-            key={strategy}
+            key={provider.strategy}
             type="button"
             variant="outline"
             className="w-full"
             disabled={loadingProvider !== null}
-            onClick={() => handleOAuth(strategy)}
+            onClick={() => handleOAuth(provider.strategy)}
           >
             {isLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <span className="mr-2">{config.icon}</span>
+              <span className="mr-2">{provider.icon}</span>
             )}
-            Continue with {config.label}
+            Continue with {provider.label}
           </Button>
         )
       })}
