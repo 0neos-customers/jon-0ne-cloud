@@ -1,0 +1,20 @@
+.marketing-root {
+  --color-orange: #FF692D;
+  --color-orange-dark: #E55A20;
+  --color-cream: #F6F5F3;
+  --color-charcoal: #22201D;
+  --color-dark: #1C1B19;
+  --color-muted: #6B6560;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  background: var(--color-cream);
+  color: var(--color-charcoal);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+.marketing-root ::selection {
+  background: var(--color-orange);
+  color: white;
+}

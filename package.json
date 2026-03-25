@@ -17,5 +17,8 @@
     "turbo": "^2.3.0",
     "typescript": "^5.7.0"
   },
-  "packageManager": "bun@1.1.42"
+  "packageManager": "bun@1.1.42",
+  "dependencies": {
+    "jszip": "^3.10.1"
+  }
 }
