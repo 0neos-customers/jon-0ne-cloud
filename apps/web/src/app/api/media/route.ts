@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { safeErrorResponse } from '@/lib/security'
 import { listFiles, deleteFile, type GHLMediaFile as GHLApiFile } from '@/features/media/lib/ghl-media-client'
 
@@ -38,6 +39,7 @@ function transformFile(file: GHLApiFile) {
  */
 export async function GET(request: NextRequest) {
   try {
+    await requireAuth()
     const { searchParams } = new URL(request.url)
     const parentId = searchParams.get('parentId') || undefined
     const search = searchParams.get('search') || undefined
@@ -74,6 +76,9 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     return safeErrorResponse('Failed to fetch media files', error)
   }
 }
@@ -84,6 +89,7 @@ export async function GET(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    await requireAuth()
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
@@ -98,6 +104,9 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('[Media API] DELETE error:', error)
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     return safeErrorResponse('Failed to delete file', error)
   }
 }

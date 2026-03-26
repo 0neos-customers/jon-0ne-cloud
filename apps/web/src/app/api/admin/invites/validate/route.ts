@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { db, eq } from '@0ne/db/server'
 import { invites } from '@0ne/db/server'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
-  const token = request.nextUrl.searchParams.get('token')
-
-  if (!token) {
-    return NextResponse.json({ valid: false, error: 'Token required' }, { status: 400 })
-  }
-
   try {
+    await requireAuth()
+    const token = request.nextUrl.searchParams.get('token')
+
+    if (!token) {
+      return NextResponse.json({ valid: false, error: 'Token required' }, { status: 400 })
+    }
     const [data] = await db
       .select({
         id: invites.id,
@@ -39,7 +40,10 @@ export async function GET(request: NextRequest) {
       valid: true,
       invite: { email: data.email, name: data.name },
     })
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     return NextResponse.json({ valid: false, error: 'Invalid invite' }, { status: 404 })
   }
 }

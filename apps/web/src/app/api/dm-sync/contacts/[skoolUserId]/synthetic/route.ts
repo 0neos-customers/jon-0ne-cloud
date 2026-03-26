@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { db, eq } from '@0ne/db/server'
 import { dmContactMappings, skoolMembers } from '@0ne/db/server'
 import { parseDisplayName } from '@/features/dm-sync/lib/contact-mapper'
@@ -15,6 +16,7 @@ export async function POST(
   { params }: { params: Promise<{ skoolUserId: string }> }
 ) {
   try {
+    await requireAuth()
     const { skoolUserId } = await params
 
     // 1. Fetch the existing mapping for name/username
@@ -115,6 +117,9 @@ export async function POST(
 
     return NextResponse.json({ success: true, ghlContactId })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Contacts API] POST synthetic exception:', error)
     return NextResponse.json(
       { error: 'Failed to create synthetic contact', details: String(error) },

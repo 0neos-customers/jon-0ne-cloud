@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { db, gte, lte, asc, and } from '@0ne/db/server'
 import { skoolMetrics } from '@0ne/db/server'
 
@@ -15,6 +16,7 @@ import { skoolMetrics } from '@0ne/db/server'
  */
 export async function GET(request: NextRequest) {
   try {
+    await requireAuth()
     const { searchParams } = new URL(request.url)
     const startDateParam = searchParams.get('startDate')
     const endDateParam = searchParams.get('endDate')
@@ -72,6 +74,9 @@ export async function GET(request: NextRequest) {
       history,
     })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Discovery Rank API] Unexpected error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },

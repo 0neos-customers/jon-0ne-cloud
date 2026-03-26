@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { safeErrorResponse } from '@/lib/security'
 import {
   uploadFile,
@@ -29,6 +30,7 @@ export const config = {
  */
 export async function POST(request: NextRequest) {
   try {
+    await requireAuth()
     const formData = await request.formData()
     const file = formData.get('file') as File | null
     const parentId = formData.get('parentId') as string | null
@@ -79,6 +81,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     return safeErrorResponse('Failed to upload file', error)
   }
 }

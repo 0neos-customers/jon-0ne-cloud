@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { db, eq, gte, lte, lt, and, or, inArray, isNull, asc, count } from '@0ne/db/server'
 import { skoolMembers, skoolMembersDaily } from '@0ne/db/server'
 
@@ -169,6 +170,7 @@ async function getFilteredBySource(
  */
 export async function GET(request: NextRequest) {
   try {
+    await requireAuth()
     const { searchParams } = new URL(request.url)
     const startDateParam = searchParams.get('startDate')
     const endDateParam = searchParams.get('endDate')
@@ -288,6 +290,9 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Members Analytics API] Unexpected error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },

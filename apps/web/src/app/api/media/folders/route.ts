@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { safeErrorResponse } from '@/lib/security'
 import { createFolder } from '@/features/media/lib/ghl-media-client'
 
@@ -14,6 +15,7 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: NextRequest) {
   try {
+    await requireAuth()
     const body = await request.json()
     const { name, parentId } = body
 
@@ -46,6 +48,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     return safeErrorResponse('Failed to create folder', error)
   }
 }

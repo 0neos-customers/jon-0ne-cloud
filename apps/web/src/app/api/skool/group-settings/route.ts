@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { db, eq } from '@0ne/db/server'
 import { skoolGroupSettings } from '@0ne/db/server'
 import type { EmailBlastStatus } from '@0ne/db'
@@ -16,6 +17,7 @@ const COOLDOWN_HOURS = 72
  */
 export async function GET(request: NextRequest) {
   try {
+    await requireAuth()
     const { searchParams } = new URL(request.url)
     const groupSlug = searchParams.get('groupSlug') || searchParams.get('group_slug') || 'fruitful'
 
@@ -50,6 +52,9 @@ export async function GET(request: NextRequest) {
       emailBlastStatus,
     })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Group Settings API] GET exception:', error)
     return NextResponse.json(
       { error: 'Failed to fetch group settings', details: String(error) },
@@ -64,6 +69,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    await requireAuth()
     const body = await request.json()
     const groupSlug = body.groupSlug || body.group_slug || 'fruitful'
 
@@ -88,6 +94,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ settings: upserted })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Group Settings API] POST exception:', error)
     return NextResponse.json(
       { error: 'Failed to record email blast', details: String(error) },

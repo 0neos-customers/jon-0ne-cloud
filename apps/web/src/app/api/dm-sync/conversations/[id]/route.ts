@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { safeErrorResponse } from '@/lib/security'
 import { db, eq, and, asc, lt, isNotNull, inArray } from '@0ne/db/server'
 import { dmMessages, dmContactMappings, skoolMembers, conversationSyncStatus } from '@0ne/db/server'
@@ -46,6 +47,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAuth()
     const { id: conversationId } = await params
     const { searchParams } = new URL(request.url)
 
@@ -165,6 +167,9 @@ export async function GET(
       },
     } as ConversationDetailResponse)
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Conversation Detail API] GET exception:', error)
     return safeErrorResponse('Failed to fetch conversation', error)
   }

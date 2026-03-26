@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { safeErrorResponse } from '@/lib/security'
 import { db, eq, desc, and, or, count, inArray, ilike } from '@0ne/db/server'
 import { dmMessages, dmContactMappings, dmSyncConfig } from '@0ne/db/server'
@@ -47,6 +48,7 @@ interface RawMessagesResponse {
  */
 export async function GET(request: NextRequest) {
   try {
+    await requireAuth()
     const { searchParams } = new URL(request.url)
 
     const search = searchParams.get('search')?.trim() || ''
@@ -185,6 +187,9 @@ export async function GET(request: NextRequest) {
       },
     } as RawMessagesResponse)
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Raw Messages API] GET exception:', error)
     return safeErrorResponse('Failed to fetch raw messages', error)
   }

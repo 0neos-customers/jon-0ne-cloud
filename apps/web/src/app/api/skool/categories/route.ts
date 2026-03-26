@@ -14,6 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { db, eq, asc } from '@0ne/db/server'
 import { skoolCategories } from '@0ne/db/server'
 
@@ -30,6 +31,7 @@ const FRUITFUL_FALLBACK_CATEGORIES = [
 
 export async function GET(request: NextRequest) {
   try {
+    await requireAuth()
     const { searchParams } = new URL(request.url)
     const groupSlug = searchParams.get('group') || 'fruitful'
 
@@ -69,6 +71,9 @@ export async function GET(request: NextRequest) {
       count: FRUITFUL_FALLBACK_CATEGORIES.length,
     })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Categories API] GET exception:', error)
     return NextResponse.json({
       categories: FRUITFUL_FALLBACK_CATEGORIES,
@@ -86,6 +91,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    await requireAuth()
     const body = await request.json().catch(() => ({}))
     const groupSlug = body.group || 'fruitful'
 
@@ -126,6 +132,9 @@ export async function POST(request: NextRequest) {
       count: FRUITFUL_FALLBACK_CATEGORIES.length,
     })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Categories API] POST exception:', error)
     return NextResponse.json(
       { error: 'Failed to retrieve categories', details: String(error) },

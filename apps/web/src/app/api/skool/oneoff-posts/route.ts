@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { db, eq, and, asc, gte } from '@0ne/db/server'
 import { skoolOneoffPosts, skoolCampaigns } from '@0ne/db/server'
 import type { SkoolOneOffPostInput } from '@0ne/db'
@@ -72,6 +73,7 @@ function convertToUTC(localDatetime: string, timezone: string = 'America/New_Yor
  */
 export async function GET(request: NextRequest) {
   try {
+    await requireAuth()
     const { searchParams } = new URL(request.url)
     const campaignId = searchParams.get('campaignId') || searchParams.get('campaign_id')
     const status = searchParams.get('status')
@@ -111,6 +113,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ posts })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[One-Off Posts API] GET exception:', error)
     return NextResponse.json(
       { error: 'Failed to fetch one-off posts', details: String(error) },
@@ -125,6 +130,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    await requireAuth()
     const body: SkoolOneOffPostInput = await request.json()
 
     // Validate required fields
@@ -175,6 +181,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ post: { ...inserted, campaign } }, { status: 201 })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[One-Off Posts API] POST exception:', error)
     return NextResponse.json(
       { error: 'Failed to create one-off post', details: String(error) },
@@ -189,6 +198,7 @@ export async function POST(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
+    await requireAuth()
     const body = await request.json()
     const { id, ...updates } = body
 
@@ -244,6 +254,9 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ post: { ...updated, campaign } })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[One-Off Posts API] PUT exception:', error)
     return NextResponse.json(
       { error: 'Failed to update one-off post', details: String(error) },
@@ -258,6 +271,7 @@ export async function PUT(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    await requireAuth()
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
@@ -269,6 +283,9 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[One-Off Posts API] DELETE exception:', error)
     return NextResponse.json(
       { error: 'Failed to delete one-off post', details: String(error) },

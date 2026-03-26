@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { db, eq, and, asc, inArray } from '@0ne/db/server'
 import { skoolVariationGroups, skoolPostLibrary, skoolScheduledPosts } from '@0ne/db/server'
 import type { SkoolVariationGroupInput } from '@0ne/db'
@@ -11,6 +12,7 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: NextRequest) {
   try {
+    await requireAuth()
     const { searchParams } = new URL(request.url)
     const includeStats = searchParams.get('includeStats') === 'true' || searchParams.get('include_stats') === 'true'
 
@@ -70,6 +72,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ groups: groupsWithStats })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Variation Groups API] GET exception:', error)
     return NextResponse.json(
       { error: 'Failed to fetch variation groups', details: String(error) },
@@ -84,6 +89,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    await requireAuth()
     const body: SkoolVariationGroupInput = await request.json()
 
     // Validate required fields
@@ -102,6 +108,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ group: inserted }, { status: 201 })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Variation Groups API] POST exception:', error)
     return NextResponse.json(
       { error: 'Failed to create variation group', details: String(error) },
@@ -116,6 +125,7 @@ export async function POST(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
+    await requireAuth()
     const body = await request.json()
     const { id, ...updates } = body
 
@@ -141,6 +151,9 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ group: updated })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Variation Groups API] PUT exception:', error)
     return NextResponse.json(
       { error: 'Failed to update variation group', details: String(error) },
@@ -155,6 +168,7 @@ export async function PUT(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    await requireAuth()
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
@@ -168,6 +182,9 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Variation Groups API] DELETE exception:', error)
     return NextResponse.json(
       { error: 'Failed to delete variation group', details: String(error) },

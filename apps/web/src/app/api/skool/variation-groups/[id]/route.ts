@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { db, eq, count } from '@0ne/db/server'
 import { skoolVariationGroups, skoolPostLibrary, skoolScheduledPosts } from '@0ne/db/server'
 
@@ -13,6 +14,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAuth()
     const { id } = await params
 
     const [data] = await db
@@ -44,6 +46,9 @@ export async function GET(
 
     return NextResponse.json({ group: groupWithStats })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Variation Groups API] GET by ID exception:', error)
     return NextResponse.json(
       { error: 'Failed to fetch variation group', details: String(error) },

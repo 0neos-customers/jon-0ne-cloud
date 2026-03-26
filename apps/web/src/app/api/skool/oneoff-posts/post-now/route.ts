@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { db, eq } from '@0ne/db/server'
 import { skoolOneoffPosts } from '@0ne/db/server'
 
@@ -15,6 +16,7 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
+    await requireAuth()
     const { id } = await request.json()
 
     if (!id) {
@@ -62,6 +64,9 @@ export async function POST(request: NextRequest) {
       message: 'Post queued for extension publishing. It will be published within ~60 seconds.',
     })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Post Now] Exception:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Unknown error' },

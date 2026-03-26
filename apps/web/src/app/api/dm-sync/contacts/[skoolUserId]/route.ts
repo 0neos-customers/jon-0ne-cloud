@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { db, eq } from '@0ne/db/server'
 import { dmContactMappings, skoolMembers } from '@0ne/db/server'
 
@@ -22,6 +23,7 @@ export async function PATCH(
   { params }: { params: Promise<{ skoolUserId: string }> }
 ) {
   try {
+    await requireAuth()
     const { skoolUserId } = await params
     const body: ContactUpdate = await request.json()
 
@@ -88,6 +90,9 @@ export async function PATCH(
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Contacts API] PATCH exception:', error)
     return NextResponse.json(
       { error: 'Failed to update contact', details: String(error) },

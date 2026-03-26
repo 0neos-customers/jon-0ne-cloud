@@ -13,6 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { safeErrorResponse } from '@/lib/security'
 import { db, eq, desc, and, lt } from '@0ne/db/server'
 import { syncActivityLog } from '@0ne/db/server'
@@ -41,6 +42,7 @@ const VALID_STATUSES: SyncStatus[] = ['running', 'completed', 'failed']
 
 export async function GET(request: NextRequest) {
   try {
+    await requireAuth()
     const { searchParams } = new URL(request.url)
 
     // Parse query parameters
@@ -126,6 +128,9 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[sync-log API] Error:', error)
     return safeErrorResponse('Internal server error', error)
   }
@@ -139,6 +144,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    await requireAuth()
     const body = await request.json()
 
     if (body.action !== 'cleanup-stuck') {
@@ -174,6 +180,9 @@ export async function POST(request: NextRequest) {
       cutoffTime,
     })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[sync-log API] POST Error:', error)
     return safeErrorResponse('Internal server error', error)
   }

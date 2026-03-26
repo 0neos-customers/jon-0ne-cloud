@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { db, eq, asc } from '@0ne/db/server'
 import { skoolScheduledPosts, skoolVariationGroups } from '@0ne/db/server'
 import type { SkoolScheduledPostInput } from '@0ne/db'
@@ -12,6 +13,7 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET() {
   try {
+    await requireAuth()
     const data = await db
       .select({
         scheduler: skoolScheduledPosts,
@@ -32,6 +34,9 @@ export async function GET() {
 
     return NextResponse.json({ schedulers })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Schedulers API] GET exception:', error)
     return NextResponse.json(
       { error: 'Failed to fetch schedulers', details: String(error) },
@@ -46,6 +51,7 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
+    await requireAuth()
     const body: SkoolScheduledPostInput = await request.json()
 
     // Validate required fields
@@ -98,6 +104,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ scheduler: { ...inserted, variationGroup: variationGroup } }, { status: 201 })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Schedulers API] POST exception:', error)
     return NextResponse.json(
       { error: 'Failed to create scheduler', details: String(error) },
@@ -112,6 +121,7 @@ export async function POST(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
+    await requireAuth()
     const body = await request.json()
     const { id, ...updates } = body
 
@@ -170,6 +180,9 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ scheduler: { ...updated, variationGroup: variationGroup } })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Schedulers API] PUT exception:', error)
     return NextResponse.json(
       { error: 'Failed to update scheduler', details: String(error) },
@@ -184,6 +197,7 @@ export async function PUT(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    await requireAuth()
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
@@ -195,6 +209,9 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Schedulers API] DELETE exception:', error)
     return NextResponse.json(
       { error: 'Failed to delete scheduler', details: String(error) },

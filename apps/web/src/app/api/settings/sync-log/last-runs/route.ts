@@ -9,6 +9,7 @@
  */
 
 import { NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { safeErrorResponse } from '@/lib/security'
 import { db, desc, inArray } from '@0ne/db/server'
 import { syncActivityLog } from '@0ne/db/server'
@@ -42,6 +43,7 @@ interface LastRunInfo {
 
 export async function GET() {
   try {
+    await requireAuth()
     // For each sync type, get the most recent entry
     // We use a subquery to get distinct on sync_type ordered by started_at desc
     const data = await db
@@ -85,6 +87,9 @@ export async function GET() {
       lastRuns: lastRunsMap,
     })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[last-runs API] Error:', error)
     return safeErrorResponse('Internal server error', error)
   }

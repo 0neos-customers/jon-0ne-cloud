@@ -13,6 +13,7 @@
  */
 
 import { NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { safeErrorResponse } from '@/lib/security'
 import { db, desc, gte } from '@0ne/db/server'
 import { syncActivityLog } from '@0ne/db/server'
@@ -29,6 +30,7 @@ export interface SyncHealthResponse {
 
 export async function GET() {
   try {
+    await requireAuth()
     // Get timestamp for 24 hours ago
     const twentyFourHoursAgo = new Date()
     twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24)
@@ -81,6 +83,9 @@ export async function GET() {
 
     return NextResponse.json(response)
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[sync-health API] Error:', error)
     return safeErrorResponse('Internal server error', error)
   }

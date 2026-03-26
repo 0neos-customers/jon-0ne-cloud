@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { safeErrorResponse } from '@/lib/security'
 import { db, eq, and } from '@0ne/db/server'
 import { dmMessages } from '@0ne/db/server'
@@ -32,6 +33,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAuth()
     const { id: conversationId } = await params
     const body = await request.json() as SendMessageRequest
 
@@ -112,6 +114,9 @@ export async function POST(
       return safeErrorResponse('Failed to queue message', insertError)
     }
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Send Message API] POST exception:', error)
     return safeErrorResponse('Failed to send message', error)
   }

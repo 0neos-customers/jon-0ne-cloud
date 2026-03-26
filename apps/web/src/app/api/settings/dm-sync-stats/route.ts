@@ -8,6 +8,7 @@
  */
 
 import { NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { db, eq, and, gte, count } from '@0ne/db/server'
 import { dmMessages, dmContactMappings } from '@0ne/db/server'
 
@@ -22,6 +23,7 @@ interface DMSyncStats {
 
 export async function GET() {
   try {
+    await requireAuth()
     // Calculate 24 hours ago
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
 
@@ -75,6 +77,9 @@ export async function GET() {
 
     return NextResponse.json(stats)
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[dm-sync-stats API] Error:', error)
     return NextResponse.json(
       { error: 'Internal server error', details: String(error) },

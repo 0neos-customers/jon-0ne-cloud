@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { db, eq, desc, and, or, count, inArray, isNull, isNotNull, ilike } from '@0ne/db/server'
 import { dmContactMappings, dmMessages, dmSyncConfig, contactChannels as contactChannelsTable, skoolMembers, staffUsers as staffUsersTable } from '@0ne/db/server'
 
@@ -56,6 +57,7 @@ interface ContactActivityResponse {
  */
 export async function GET(request: NextRequest) {
   try {
+    await requireAuth()
     const { searchParams } = new URL(request.url)
 
     const search = searchParams.get('search')?.trim() || ''
@@ -370,6 +372,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ contacts: contactsWithStats, summary, total: (filteredCount || 0) } as ContactActivityResponse)
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Contacts API] GET exception:', error)
     return NextResponse.json(
       { error: 'Failed to fetch contact activity', details: String(error) },

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { safeErrorResponse } from '@/lib/security'
 import {
   getFile,
@@ -17,6 +18,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAuth()
     const { id } = await params
 
     if (!id) {
@@ -30,6 +32,9 @@ export async function GET(
 
     return NextResponse.json({ file: response.file })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Media API] GET by ID error:', error)
 
     // Check for missing config
@@ -64,6 +69,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAuth()
     const { id } = await params
     const body = await request.json()
     const { name } = body
@@ -89,6 +95,9 @@ export async function PUT(
       file: response.file,
     })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Media API] PUT error:', error)
 
     // Check for missing config
@@ -120,6 +129,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAuth()
     const { id } = await params
 
     if (!id) {
@@ -133,6 +143,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Media API] DELETE error:', error)
 
     // Check for missing config

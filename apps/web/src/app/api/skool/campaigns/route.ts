@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { db, eq, desc, inArray } from '@0ne/db/server'
 import { skoolCampaigns, skoolOneoffPosts } from '@0ne/db/server'
 import type { SkoolCampaignInput } from '@0ne/db'
@@ -11,6 +12,7 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: NextRequest) {
   try {
+    await requireAuth()
     const { searchParams } = new URL(request.url)
     const includeStats = searchParams.get('include_stats') === 'true'
     const activeOnly = searchParams.get('active_only') === 'true'
@@ -61,6 +63,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ campaigns: campaignsWithStats })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Campaigns API] GET exception:', error)
     return NextResponse.json(
       { error: 'Failed to fetch campaigns', details: String(error) },
@@ -75,6 +80,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    await requireAuth()
     const body: SkoolCampaignInput = await request.json()
 
     // Validate required fields
@@ -95,6 +101,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ campaign: inserted }, { status: 201 })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Campaigns API] POST exception:', error)
     return NextResponse.json(
       { error: 'Failed to create campaign', details: String(error) },
@@ -109,6 +118,7 @@ export async function POST(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
+    await requireAuth()
     const body = await request.json()
     const { id, ...updates } = body
 
@@ -136,6 +146,9 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ campaign: updated })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Campaigns API] PUT exception:', error)
     return NextResponse.json(
       { error: 'Failed to update campaign', details: String(error) },
@@ -150,6 +163,7 @@ export async function PUT(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    await requireAuth()
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
@@ -161,6 +175,9 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Campaigns API] DELETE exception:', error)
     return NextResponse.json(
       { error: 'Failed to delete campaign', details: String(error) },

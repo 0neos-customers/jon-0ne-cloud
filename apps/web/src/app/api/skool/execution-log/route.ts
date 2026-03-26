@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, AuthError } from '@/lib/auth-helpers'
 import { db, eq, and, desc, count as countFn } from '@0ne/db/server'
 import { skoolPostExecutionLog, skoolScheduledPosts, skoolPostLibrary } from '@0ne/db/server'
 
@@ -16,6 +17,7 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: NextRequest) {
   try {
+    await requireAuth()
     const { searchParams } = new URL(request.url)
 
     // Parse pagination params with defaults and limits
@@ -94,6 +96,9 @@ export async function GET(request: NextRequest) {
       hasMore: offset + limit < total,
     })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[ExecutionLog API] GET exception:', error)
     return NextResponse.json(
       { error: 'Failed to fetch execution logs', details: String(error) },
@@ -108,6 +113,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    await requireAuth()
     const body = await request.json()
 
     // Validate required fields
@@ -141,6 +147,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ log: inserted }, { status: 201 })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[ExecutionLog API] POST exception:', error)
     return NextResponse.json(
       { error: 'Failed to create execution log', details: String(error) },
